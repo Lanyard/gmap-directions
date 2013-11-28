@@ -1,0 +1,69 @@
+<?php
+
+/**
+ * @defgroup Location Location: An API for working with locations.
+ *
+ * Public API for the Location module.
+ */
+
+
+/**
+ * @file
+ * An implementation of a universal API for location manipulation.  Provides functions for
+ * postal_code proximity searching, deep-linking into online mapping services.  Currently,
+ * some options are configured through an interface provided by location.module.
+ */
+
+include_once(DRUPAL_ROOT . '/' . drupal_get_path('module', 'location') . '/earth.inc');
+
+function gmap_directions_process_location(&$variables) {
+  $location = $variables['location'];
+
+  $form = drupal_get_form('get_start_address_form', $location);
+
+  $markup = drupal_render($form);
+
+  $variables['map_link'] .= $markup;
+}
+
+function get_start_address_form($form, &$form_state, $location) {
+
+  $form['start_address'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Get directions to the above address from:')
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Get Directions'),
+  );
+
+  $form_state['build_info']['args'] = array('location' => $location);
+
+  return $form;
+}
+
+function get_start_address_form_submit($form, &$form_state) {
+  $saddr = $form_state['values']['start_address'];
+
+  $location = $form_state['build_info']['args']['location'];
+
+  $query_params = array();
+
+  foreach (array('street', 'city', 'province', 'postal_code', 'country') as $field) {
+    if (isset($location[$field])) {
+      $query_params[] = $location[$field];
+    }
+  }
+
+  if (count($query_params)) {
+    $daddr = implode(", ", $query_params);
+    $directions_url = 'http://maps.google.com/?saddr=' . urlencode( $saddr ) . '&daddr=' . urlencode( $daddr );
+  }
+
+  else {
+    $directions_url = check_url('http://maps.google.com/');
+  }
+
+  drupal_goto($directions_url);
+}
